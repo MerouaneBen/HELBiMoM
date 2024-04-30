@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-cleanup-job
+spec:
+  schedule: "0 2 * * *" # Run daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup-cleanup
+            image: busybox
+            env:
+              - name: RETENTION_PERIOD
+                value: "7" # Define the retention period here
+            volumeMounts:
+              - name: script-volume
+                mountPath: /scripts
+                readOnly: true
+              - name: mongodump
+                mountPath: /backup
+            command: ["/bin/sh", "/scripts/delete_old_backups.sh"]
+          volumes:
+            - name: script-volume
+              configMap:
+                name: delete-old-backups-script
+            - name: mongodump
+              persistentVolumeClaim:
+                claimName: mongo-mongodb-mongodump
+          restartPolicy: OnFailure
